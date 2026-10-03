@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""router - pick the cheapest capable model for a task, and start it in Herdr.
+"""router - pick the cheapest capable model for a task, and show how to start it in Herdr.
 
     router run "<task>" --files src/http/client.py
     router models                 which models are candidates, and why
