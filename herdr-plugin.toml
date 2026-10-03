@@ -1,0 +1,58 @@
+id = "model-router"
+name = "Model Router"
+version = "0.1.0"
+min_herdr_version = "0.9.0"
+description = "Route coding tasks to the cheapest capable model from Herdr."
+platforms = ["linux", "macos"]
+
+[[panes]]
+id = "route"
+title = "Route a task"
+placement = "overlay"
+command = ["bash", "herdr-plugin/route.sh"]
+
+[[panes]]
+id = "models"
+title = "Model candidates"
+placement = "overlay"
+command = ["bash", "herdr-plugin/models.sh"]
+
+[[panes]]
+id = "status"
+title = "Router status"
+placement = "overlay"
+command = ["bash", "herdr-plugin/status.sh"]
+
+[[panes]]
+id = "cache-stats"
+title = "Router cache statistics"
+placement = "overlay"
+command = ["bash", "herdr-plugin/cache.sh"]
+
+[[actions]]
+id = "route"
+title = "Route a task"
+description = "Prompt for a task and route it to a capable model."
+contexts = ["workspace"]
+command = ["bash", "herdr-plugin/open-pane.sh", "route"]
+
+[[actions]]
+id = "models"
+title = "Show model candidates"
+description = "Open the candidate model table, with capabilities and context windows."
+contexts = ["workspace"]
+command = ["bash", "herdr-plugin/open-pane.sh", "models"]
+
+[[actions]]
+id = "status"
+title = "Show router status"
+description = "Open routing, catalog and cache status."
+contexts = ["workspace"]
+command = ["bash", "herdr-plugin/open-pane.sh", "status"]
+
+[[actions]]
+id = "cache-stats"
+title = "Show cache statistics"
+description = "Open judgment cache size and replay statistics."
+contexts = ["workspace"]
+command = ["bash", "herdr-plugin/open-pane.sh", "cache-stats"]

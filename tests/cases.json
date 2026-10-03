@@ -1,0 +1,357 @@
+[
+  {
+    "name": "coordination",
+    "note": "a shallow, narrow summary is coordination-tier work",
+    "expect_tier": "COORDINATION",
+    "expect_context_class": null,
+    "expect_reviewer_tier": null,
+    "options": {},
+    "judgments": {
+      "task_kind": "summarize",
+      "task_kind_confidence": 0.9,
+      "reasoning_complexity": 0.1,
+      "reasoning_complexity_confidence": 0.85,
+      "context_breadth": 0.2,
+      "context_breadth_confidence": 0.85,
+      "ambiguity": 0.3,
+      "ambiguity_confidence": 0.85,
+      "mechanical": 0.3,
+      "independently_testable": 0.5,
+      "architecture_scope": 0.2,
+      "high_risk_domain": 0.1,
+      "long_horizon": 0.05
+    }
+  },
+  {
+    "name": "orchestration",
+    "note": "ordinary planning and assignment",
+    "expect_tier": "ORCHESTRATION",
+    "expect_context_class": null,
+    "expect_reviewer_tier": null,
+    "options": {},
+    "judgments": {
+      "task_kind": "orchestrate",
+      "task_kind_confidence": 0.9,
+      "reasoning_complexity": 0.5,
+      "reasoning_complexity_confidence": 0.85,
+      "context_breadth": 0.3,
+      "context_breadth_confidence": 0.85,
+      "ambiguity": 0.4,
+      "ambiguity_confidence": 0.85,
+      "mechanical": 0.3,
+      "independently_testable": 0.5,
+      "architecture_scope": 0.2,
+      "high_risk_domain": 0.1,
+      "long_horizon": 0.05
+    }
+  },
+  {
+    "name": "orchestration-escalation",
+    "note": "planning that is both hard and ambiguous",
+    "expect_tier": "ORCHESTRATION_ESCALATION",
+    "expect_context_class": null,
+    "expect_reviewer_tier": null,
+    "options": {},
+    "judgments": {
+      "task_kind": "orchestrate",
+      "task_kind_confidence": 0.9,
+      "reasoning_complexity": 0.85,
+      "reasoning_complexity_confidence": 0.85,
+      "context_breadth": 0.3,
+      "context_breadth_confidence": 0.85,
+      "ambiguity": 0.75,
+      "ambiguity_confidence": 0.85,
+      "mechanical": 0.3,
+      "independently_testable": 0.5,
+      "architecture_scope": 0.2,
+      "high_risk_domain": 0.1,
+      "long_horizon": 0.05
+    }
+  },
+  {
+    "name": "local-default",
+    "note": "bounded, mechanical, self-verifiable work in one module",
+    "expect_tier": "LOCAL_WORKER",
+    "expect_context_class": "default",
+    "expect_reviewer_tier": null,
+    "options": {},
+    "judgments": {
+      "task_kind": "implement",
+      "task_kind_confidence": 0.9,
+      "reasoning_complexity": 0.2,
+      "reasoning_complexity_confidence": 0.85,
+      "context_breadth": 0.2,
+      "context_breadth_confidence": 0.85,
+      "ambiguity": 0.3,
+      "ambiguity_confidence": 0.85,
+      "mechanical": 0.9,
+      "independently_testable": 0.9,
+      "architecture_scope": 0.1,
+      "high_risk_domain": 0.05,
+      "long_horizon": 0.05
+    }
+  },
+  {
+    "name": "local-wide-mechanical",
+    "note": "same work spread over several files: widen the alias, do not escalate",
+    "expect_tier": "LOCAL_WORKER",
+    "expect_context_class": "wide-mechanical",
+    "expect_reviewer_tier": null,
+    "options": {},
+    "judgments": {
+      "task_kind": "implement",
+      "task_kind_confidence": 0.9,
+      "reasoning_complexity": 0.2,
+      "reasoning_complexity_confidence": 0.85,
+      "context_breadth": 0.6,
+      "context_breadth_confidence": 0.85,
+      "ambiguity": 0.3,
+      "ambiguity_confidence": 0.85,
+      "mechanical": 0.9,
+      "independently_testable": 0.9,
+      "architecture_scope": 0.1,
+      "high_risk_domain": 0.05,
+      "long_horizon": 0.05
+    }
+  },
+  {
+    "name": "local-wide-context",
+    "note": "THE load-bearing case: a repository-wide but low-reasoning sweep stays local on the long-context alias and must not reach WORKER",
+    "expect_tier": "LOCAL_WORKER",
+    "expect_context_class": "wide-context",
+    "expect_reviewer_tier": null,
+    "options": {},
+    "judgments": {
+      "task_kind": "implement",
+      "task_kind_confidence": 0.9,
+      "reasoning_complexity": 0.25,
+      "reasoning_complexity_confidence": 0.85,
+      "context_breadth": 0.95,
+      "context_breadth_confidence": 0.85,
+      "ambiguity": 0.3,
+      "ambiguity_confidence": 0.85,
+      "mechanical": 0.85,
+      "independently_testable": 0.85,
+      "architecture_scope": 0.1,
+      "high_risk_domain": 0.05,
+      "long_horizon": 0.2
+    }
+  },
+  {
+    "name": "local-bounded-but-not-repetitive",
+    "note": "REGRESSION (from a live Jev run): wiring an existing helper into a call path and adding a test is bounded, safe and self-verifiable but not repetitive. It must stay on the local tier; gating on `mechanical` as well as reasoning used to push it to WORKER.",
+    "expect_tier": "LOCAL_WORKER",
+    "expect_context_class": "default",
+    "expect_reviewer_tier": null,
+    "options": {},
+    "judgments": {
+      "task_kind": "implement",
+      "task_kind_confidence": 1.0,
+      "reasoning_complexity": 0.233,
+      "reasoning_complexity_confidence": 0.85,
+      "context_breadth": 0.467,
+      "context_breadth_confidence": 0.85,
+      "ambiguity": 0.133,
+      "ambiguity_confidence": 0.85,
+      "mechanical": 0.45,
+      "independently_testable": 0.87,
+      "architecture_scope": 0.15,
+      "high_risk_domain": 0.05,
+      "long_horizon": 0.05
+    }
+  },
+  {
+    "name": "worker",
+    "note": "needs judgment and touches cross-module contracts",
+    "expect_tier": "WORKER",
+    "expect_context_class": null,
+    "expect_reviewer_tier": null,
+    "options": {},
+    "judgments": {
+      "task_kind": "implement",
+      "task_kind_confidence": 0.9,
+      "reasoning_complexity": 0.6,
+      "reasoning_complexity_confidence": 0.85,
+      "context_breadth": 0.3,
+      "context_breadth_confidence": 0.85,
+      "ambiguity": 0.3,
+      "ambiguity_confidence": 0.85,
+      "mechanical": 0.2,
+      "independently_testable": 0.4,
+      "architecture_scope": 0.7,
+      "high_risk_domain": 0.1,
+      "long_horizon": 0.05
+    }
+  },
+  {
+    "name": "worker-escalation-by-difficulty",
+    "note": "very hard and highly ambiguous: the only reason to escalate",
+    "expect_tier": "WORKER_ESCALATION",
+    "expect_context_class": null,
+    "expect_reviewer_tier": null,
+    "options": {},
+    "judgments": {
+      "task_kind": "implement",
+      "task_kind_confidence": 0.9,
+      "reasoning_complexity": 0.9,
+      "reasoning_complexity_confidence": 0.85,
+      "context_breadth": 0.3,
+      "context_breadth_confidence": 0.85,
+      "ambiguity": 0.8,
+      "ambiguity_confidence": 0.85,
+      "mechanical": 0.1,
+      "independently_testable": 0.3,
+      "architecture_scope": 0.2,
+      "high_risk_domain": 0.1,
+      "long_horizon": 0.05
+    }
+  },
+  {
+    "name": "worker-escalation-after-failure",
+    "note": "the worker tier already failed this task; step up exactly one rung",
+    "expect_tier": "WORKER_ESCALATION",
+    "expect_context_class": null,
+    "expect_reviewer_tier": null,
+    "options": {
+      "failed": [
+        "WORKER"
+      ]
+    },
+    "judgments": {
+      "task_kind": "implement",
+      "task_kind_confidence": 0.9,
+      "reasoning_complexity": 0.6,
+      "reasoning_complexity_confidence": 0.85,
+      "context_breadth": 0.3,
+      "context_breadth_confidence": 0.85,
+      "ambiguity": 0.3,
+      "ambiguity_confidence": 0.85,
+      "mechanical": 0.2,
+      "independently_testable": 0.4,
+      "architecture_scope": 0.7,
+      "high_risk_domain": 0.1,
+      "long_horizon": 0.05
+    }
+  },
+  {
+    "name": "local-failure-steps-to-worker",
+    "note": "the local tier already failed; step up one rung, not two",
+    "expect_tier": "WORKER",
+    "expect_context_class": null,
+    "expect_reviewer_tier": null,
+    "options": {
+      "failed": [
+        "LOCAL_WORKER"
+      ]
+    },
+    "judgments": {
+      "task_kind": "implement",
+      "task_kind_confidence": 0.9,
+      "reasoning_complexity": 0.2,
+      "reasoning_complexity_confidence": 0.85,
+      "context_breadth": 0.2,
+      "context_breadth_confidence": 0.85,
+      "ambiguity": 0.3,
+      "ambiguity_confidence": 0.85,
+      "mechanical": 0.9,
+      "independently_testable": 0.9,
+      "architecture_scope": 0.1,
+      "high_risk_domain": 0.05,
+      "long_horizon": 0.05
+    }
+  },
+  {
+    "name": "specialist-gated-off",
+    "note": "long-horizon work does NOT reach the specialist without the flag",
+    "expect_tier": "WORKER",
+    "expect_context_class": null,
+    "expect_reviewer_tier": null,
+    "options": {},
+    "judgments": {
+      "task_kind": "implement",
+      "task_kind_confidence": 0.9,
+      "reasoning_complexity": 0.6,
+      "reasoning_complexity_confidence": 0.85,
+      "context_breadth": 0.9,
+      "context_breadth_confidence": 0.85,
+      "ambiguity": 0.3,
+      "ambiguity_confidence": 0.85,
+      "mechanical": 0.2,
+      "independently_testable": 0.4,
+      "architecture_scope": 0.2,
+      "high_risk_domain": 0.1,
+      "long_horizon": 0.9
+    }
+  },
+  {
+    "name": "specialist-allowed",
+    "note": "the same task with --allow-specialist",
+    "expect_tier": "SPECIALIST",
+    "expect_context_class": null,
+    "expect_reviewer_tier": null,
+    "options": {
+      "allow_specialist": true
+    },
+    "judgments": {
+      "task_kind": "implement",
+      "task_kind_confidence": 0.9,
+      "reasoning_complexity": 0.6,
+      "reasoning_complexity_confidence": 0.85,
+      "context_breadth": 0.9,
+      "context_breadth_confidence": 0.85,
+      "ambiguity": 0.3,
+      "ambiguity_confidence": 0.85,
+      "mechanical": 0.2,
+      "independently_testable": 0.4,
+      "architecture_scope": 0.2,
+      "high_risk_domain": 0.1,
+      "long_horizon": 0.9
+    }
+  },
+  {
+    "name": "high-risk-adds-reviewer",
+    "note": "high-risk work leaves the local tier and gains an independent reviewer on a different tier",
+    "expect_tier": "WORKER",
+    "expect_context_class": null,
+    "expect_reviewer_tier": "WORKER_ESCALATION",
+    "options": {},
+    "judgments": {
+      "task_kind": "implement",
+      "task_kind_confidence": 0.9,
+      "reasoning_complexity": 0.3,
+      "reasoning_complexity_confidence": 0.85,
+      "context_breadth": 0.3,
+      "context_breadth_confidence": 0.85,
+      "ambiguity": 0.3,
+      "ambiguity_confidence": 0.85,
+      "mechanical": 0.8,
+      "independently_testable": 0.8,
+      "architecture_scope": 0.2,
+      "high_risk_domain": 0.9,
+      "long_horizon": 0.05
+    }
+  },
+  {
+    "name": "high-risk-review-escalates",
+    "note": "reviewing high-risk work escalates, and its reviewer steps DOWN a rung so the reviewer is still a different model",
+    "expect_tier": "WORKER_ESCALATION",
+    "expect_context_class": null,
+    "expect_reviewer_tier": "WORKER",
+    "options": {},
+    "judgments": {
+      "task_kind": "review",
+      "task_kind_confidence": 0.9,
+      "reasoning_complexity": 0.6,
+      "reasoning_complexity_confidence": 0.85,
+      "context_breadth": 0.3,
+      "context_breadth_confidence": 0.85,
+      "ambiguity": 0.3,
+      "ambiguity_confidence": 0.85,
+      "mechanical": 0.2,
+      "independently_testable": 0.4,
+      "architecture_scope": 0.2,
+      "high_risk_domain": 0.8,
+      "long_horizon": 0.05
+    }
+  }
+]

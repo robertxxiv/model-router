@@ -1,0 +1,23 @@
+{
+  "architecture_threshold": 0.8,
+  "high_risk_threshold": 0.6,
+  "testable_threshold": 0.6,
+  "long_horizon_threshold": 0.7,
+  "jev_timeout_seconds": 20.0,
+  "jev_total_timeout_seconds": 45.0,
+  "ambiguity_lifts_need": 0.25,
+  "max_capability_shortfall": 0.15,
+  "implied_tokens_base": 8000,
+  "implied_tokens_span": 32,
+  "w_shortfall": 1.2,
+  "w_context": 0.9,
+  "w_overshoot": 0.15,
+  "w_cost": 0.2,
+  "w_oversized": 0.1,
+  "oversize_at": 8.0,
+  "w_unmetered": 0.08,
+  "w_horizon": 0.1,
+  "relative_cost_full": 3.0,
+  "confirm_margin": 0.05,
+  "near_margin": 0.1
+}

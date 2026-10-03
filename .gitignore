@@ -1,0 +1,20 @@
+# Your own configuration and state - never committed.
+# models.example.json and config.example.json are the portable examples.
+models.json
+config.json
+.env
+.model-router/
+
+# Local agent and editor state
+.claude/settings.local.json
+.pi/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Transient
+out/
+*.tmp
+tests/_tmp_*.md

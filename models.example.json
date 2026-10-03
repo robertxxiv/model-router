@@ -1,0 +1,121 @@
+{
+  "updatedAt": "2026-10-02",
+  "provenance": "Example catalog with invented identifiers. Local entries show what discover.py writes from an inference server's own launch arguments; hosted entries are operator-curated. Replace the ids with your own, or run `discover.py --out models.json`.",
+  "models": [
+    {
+      "id": "vendor:cheap",
+      "role": "COORDINATION",
+      "harness": "codex",
+      "model": "vendor-cheap",
+      "launchArgs": ["-m", "vendor-cheap"],
+      "contextWindow": 400000,
+      "capabilities": {"planning": 0.45, "coding": 0.40, "debugging": 0.40, "creativity": 0.45, "research": 0.60},
+      "relativeCost": 0.4,
+      "notes": "summaries, exploration, repetitive coordination"
+    },
+    {
+      "id": "local-small-32k",
+      "role": "LOCAL_WORKER",
+      "harness": "pi",
+      "launchArgs": ["--model", "local-small-32k"],
+      "contextWindow": 32768,
+      "capabilities": {"planning": 0.26, "coding": 0.46, "debugging": 0.41, "creativity": 0.36, "research": 0.46},
+      "unmetered": true,
+      "quantized": true,
+      "notes": "4-bit quantized, 32K"
+    },
+    {
+      "id": "local-mid-64k",
+      "role": "LOCAL_WORKER",
+      "harness": "pi",
+      "launchArgs": ["--model", "local-mid-64k"],
+      "contextWindow": 65536,
+      "capabilities": {"planning": 0.26, "coding": 0.46, "debugging": 0.41, "creativity": 0.36, "research": 0.46},
+      "unmetered": true,
+      "quantized": true,
+      "notes": "4-bit quantized, 64K"
+    },
+    {
+      "id": "local-wide-262k",
+      "role": "LOCAL_WORKER",
+      "harness": "pi",
+      "launchArgs": ["--model", "local-wide-262k"],
+      "contextWindow": 262144,
+      "capabilities": {"planning": 0.24, "coding": 0.44, "debugging": 0.39, "creativity": 0.34, "research": 0.44},
+      "unmetered": true,
+      "quantized": true,
+      "notes": "4-bit quantized, 262K - for sweeps that do not fit elsewhere"
+    },
+    {
+      "id": "local-coder-128k",
+      "role": "LOCAL_WORKER",
+      "harness": "pi",
+      "launchArgs": ["--model", "local-coder-128k"],
+      "contextWindow": 131072,
+      "capabilities": {"planning": 0.32, "coding": 0.60, "debugging": 0.51, "creativity": 0.42, "research": 0.52},
+      "unmetered": true,
+      "quantized": true,
+      "notes": "6-bit quantized, code-specialized, 128K"
+    },
+    {
+      "id": "vendor:plan",
+      "role": "ORCHESTRATION",
+      "harness": "codex",
+      "model": "vendor-plan",
+      "effort": "medium",
+      "launchArgs": ["-m", "vendor-plan", "-c", "model_reasoning_effort=medium"],
+      "contextWindow": 400000,
+      "supportedEfforts": ["low", "medium", "high"],
+      "capabilities": {"planning": 0.82, "coding": 0.62, "debugging": 0.70, "creativity": 0.65, "research": 0.78},
+      "relativeCost": 1.0,
+      "notes": "primary orchestrator"
+    },
+    {
+      "id": "vendor:plan-high",
+      "role": "ORCHESTRATION_ESCALATION",
+      "harness": "codex",
+      "model": "vendor-plan",
+      "effort": "high",
+      "launchArgs": ["-m", "vendor-plan", "-c", "model_reasoning_effort=high"],
+      "contextWindow": 400000,
+      "supportedEfforts": ["low", "medium", "high"],
+      "capabilities": {"planning": 0.92, "coding": 0.70, "debugging": 0.85, "creativity": 0.72, "research": 0.88},
+      "relativeCost": 2.0,
+      "notes": "same model as vendor:plan at a higher reasoning effort"
+    },
+    {
+      "id": "vendor:worker",
+      "role": "WORKER",
+      "harness": "claude",
+      "model": "vendor-worker",
+      "launchArgs": ["--model", "vendor-worker"],
+      "contextWindow": 200000,
+      "supportedEfforts": ["low", "medium", "high"],
+      "capabilities": {"planning": 0.80, "coding": 0.85, "debugging": 0.85, "creativity": 0.72, "research": 0.78},
+      "relativeCost": 1.0,
+      "notes": "default strong worker"
+    },
+    {
+      "id": "vendor:strong",
+      "role": "WORKER_ESCALATION",
+      "harness": "claude",
+      "model": "vendor-strong",
+      "launchArgs": ["--model", "vendor-strong"],
+      "contextWindow": 200000,
+      "capabilities": {"planning": 0.92, "coding": 0.92, "debugging": 0.95, "creativity": 0.85, "research": 0.88},
+      "relativeCost": 3.0,
+      "notes": "escalation only"
+    },
+    {
+      "id": "vendor:specialist",
+      "role": "SPECIALIST",
+      "harness": "claude",
+      "model": "vendor-specialist",
+      "launchArgs": ["--model", "vendor-specialist"],
+      "contextWindow": 200000,
+      "capabilities": {"planning": 0.88, "coding": 0.93, "debugging": 0.85, "creativity": 0.90, "research": 0.90},
+      "relativeCost": 3.0,
+      "notes": "long-horizon only; never a default"
+    }
+  ]
+}
