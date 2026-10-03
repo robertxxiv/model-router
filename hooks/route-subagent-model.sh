@@ -82,6 +82,6 @@ printf '%s' "$INPUT" | jq -c \
   --arg m "$MODEL" --arg r "$ROLE" --arg s "$SCORE" --arg w "$WHY" --arg x "$CONFIRM" \
   '{hookSpecificOutput:{hookEventName:"PreToolUse",
   permissionDecision:"allow",
-  permissionDecisionReason:("model-router chose " + $m + " (" + $r + ", score " + $s + "): " + $w + "." + $x + " Pass model explicitly to override, or disable routing for this project with `route.py --disable`."),
+  permissionDecisionReason:("model-router chose " + $m + " (" + $r + ", score " + $s + "): " + $w + "." + $x + " Pass model explicitly to override, or disable routing for this project with `router disable`."),
   updatedInput:(.tool_input + {model:$m})}}'
 exit 0

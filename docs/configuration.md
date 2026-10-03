@@ -158,8 +158,8 @@ The file shape written by the CLI is:
 - unreadable or corrupt JSON: routing fails open, remains enabled, and records
   an explanatory note.
 
-`route.py --disable` writes the disabled form atomically;
-`route.py --enable` writes `{"enabled": true}`. `--ignore-switch` routes once
+`router disable` writes the disabled form atomically;
+`router enable` writes `{"enabled": true}`. `--ignore-switch` routes once
 even when the project switch is off.
 
 ## Generating a catalog

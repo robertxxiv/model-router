@@ -4,6 +4,7 @@
     router run "<task>" --files src/http/client.py
     router models                 which models are candidates, and why
     router status                 is routing on, what catalog, what cache
+    router enable / disable       turn routing on or off for this project
     router cache stats            how often routes are replayed rather than judged
     router import-roster FILE     convert a markdown policy file into models.json
 
@@ -63,6 +64,17 @@ def cmd_models(args) -> int:
 
 
 # ------------------------------------------------------------------ status --
+def cmd_switch(args) -> int:
+    """Turn routing on or off for this project."""
+    start = Path(args.cwd) if args.cwd else None
+    on = args.command == "enable"
+    path = router_config.write(
+        on, start, note=None if on else "routing disabled for this project")
+    print(f"routing {'enabled' if on else 'disabled'} for "
+          f"{router_config.project_root(start)}\n  wrote {path}")
+    return 0
+
+
 def cmd_status(args) -> int:
     start = Path(args.cwd) if args.cwd else None
     route.show_status(start)
@@ -185,6 +197,12 @@ def build_parser() -> argparse.ArgumentParser:
     st.add_argument("--cwd")
     st.add_argument("--config")
     st.set_defaults(func=cmd_status)
+
+    for name, helptext in (("enable", "turn routing on for this project"),
+                           ("disable", "turn routing off for this project")):
+        sw = sub.add_parser(name, help=helptext)
+        sw.add_argument("--cwd")
+        sw.set_defaults(func=cmd_switch)
 
     c = sub.add_parser("cache", help="the judgment cache that makes routes repeatable")
     csub = c.add_subparsers(dest="cache_action", required=True)

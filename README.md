@@ -1,5 +1,47 @@
 # model-router
 
+**TL;DR** — You have several coding models available: a strong hosted one, a
+cheap hosted one, a few you run yourself. For any given task, which should do
+it? This answers that, deterministically, and hands you the commands to start
+it.
+
+```sh
+pip install -r requirements.txt
+cp models.example.json models.json      # then edit it to list YOUR models
+echo "TYPESAFE_API_KEY=..." > .env      # console.typesafe.ai
+
+router run "wire the retry helper into client.request() and add a test" \
+           --files src/http/client.py
+```
+
+```
+LOCAL_WORKER  local-small-32k   score 1.069   confidence 0.72
+task : implement (100%) -> coding capability 0.46 vs need 0.39
+ctx  : holds 32,768, task needs about 5,610
+why  : overshoot -0.011 unmetered +0.080
+next : local-mid-64k score 1.023 (gap +0.046)
+
+herdr agent list
+herdr pane split --current --direction right --cwd "$PWD" --no-focus
+herdr agent start pi-local-worker-1 --kind pi --pane <pane-id> -- --model local-small-32k
+```
+
+It sent the task to a free local model because the task is small, verifiable and
+not risky — and it shows the arithmetic that decided so. Paste the last two
+lines and the worker is running.
+
+- **Deterministic.** One remote call characterises the *task*; everything after
+  that is arithmetic. The answer is cached, so the same task always routes the
+  same way. ([why](docs/architecture.md))
+- **No hardcoded model names.** You declare what you can run in `models.json`;
+  change a number and the route changes. ([reference](docs/configuration.md))
+- **Advisory.** It prints commands and never runs them. The only command it
+  executes is the read-only `herdr agent list`. ([threat model](docs/security.md))
+
+Full walkthrough: [Using it](#using-it).
+
+---
+
 Pick the cheapest capable model for a coding task, and print the exact
 [Herdr](https://herdr.dev) commands to put a worker on it.
 
@@ -62,6 +104,7 @@ in the code — both fall out of the candidate set and the score.
 router run "<task>" [--files ...]   route one task
 router models                       the candidate table and why each model is there
 router status                       routing, catalog and cache at a glance
+router enable | router disable      turn routing on or off for this project
 router cache stats|clear|prune      the judgment cache that makes routes repeatable
 router import-roster FILE           convert a markdown policy file into models.json
 ```
@@ -136,6 +179,132 @@ field records.
 
 Nothing about your server is stored in the catalog — no host, no key.
 
+## Using it
+
+### 1. Tell it what you can run
+
+`models.json` is the only file you must supply. Copy `models.example.json` and
+replace the entries with your own models — one entry per model you could
+actually start, each saying which harness runs it and how good it is.
+
+If you serve models yourself through an OpenAI-compatible endpoint, do not type
+their facts by hand:
+
+```sh
+export LLAMA_BASE_URL=https://your-inference-host
+export LLAMA_API_KEY=...
+python discover.py --out models.json     # reads real context windows and quantization
+```
+
+Check the result:
+
+```sh
+router models          # every candidate, its capabilities, context window and cost class
+router status          # is routing on, which catalog, how warm the cache is
+```
+
+### 2. Route a task
+
+Describe the task the way you would to a colleague, and name the files it
+touches — measured file sizes beat a guess about scope:
+
+```sh
+router run "Split the Store class into read and write paths; every caller
+            depends on it. Keep the public API stable." --files src/store.py
+```
+
+```
+WORKER  vendor-worker   score 0.884   confidence 0.98
+task : refactor (99%) -> coding capability 0.85 vs need 0.67
+ctx  : holds 200,000, task needs about 61,420
+why  : overshoot -0.027 cost -0.067
+next : vendor-strong score 0.755 (gap +0.129)
+```
+
+Same task, different answer — this one changes contracts other modules depend
+on, so the local models were filtered out before scoring and the strong hosted
+model won. Ask why anything lost with `-v`:
+
+```sh
+router run "$TASK" -v        # the full ranking, plus every exclusion and its reason
+```
+
+### 3. Start the worker
+
+The router prints the Herdr commands; you run them. Split a pane, read the pane
+id it returns, then start the agent:
+
+```sh
+herdr pane split --current --direction right --cwd "$PWD" --no-focus
+herdr agent start worker-1 --kind claude --pane w1:p4 -- --model vendor-worker
+herdr agent prompt worker-1 "$TASK" --wait --timeout 600000
+```
+
+If an idle agent already runs the chosen model, the router suggests reusing it
+instead — labelled `likely` or `possible`, because Herdr does not report an
+agent's model and the match is a heuristic. Confirm before trusting it.
+
+### 4. When a worker fails
+
+Tell the router what failed and why. It will not pick that model again for this
+task, and the reason goes into the next judgment:
+
+```sh
+router run "$TASK" --failed WORKER:"could not reproduce the race"
+```
+
+Escalation is never automatic and never happens because a task is *large* —
+only because it is reasoning-hard. A wide, shallow task widens the model
+instead.
+
+### 5. High-risk work gets a second pair of eyes
+
+When a task touches auth, permissions, migrations, payments, concurrency, a
+public API contract, destructive operations or deployment, the router also names
+an **independent reviewer** on a different model from the implementer:
+
+```
+reviewer: vendor-strong (WORKER_ESCALATION, score 0.755)
+why     : high-risk work needs a reviewer independent of the implementer
+```
+
+### 6. Make it disagree with you less
+
+Every threshold and weight is in `config.json`, and retuning costs nothing
+because selection never calls the API:
+
+```sh
+router run "$TASK" --json > /tmp/v.json          # keep the judgments
+jq .judgments /tmp/v.json > /tmp/j.json
+router run "$TASK" --judgments-file /tmp/j.json  # re-route offline, free
+```
+
+Route five or six tasks whose right answer you already know, then adjust
+`config.json` until it agrees. `docs/configuration.md` says what each key does.
+
+### 7. From Herdr, or from a hook
+
+Link the plugin and routing becomes a keybinding instead of a prompt:
+
+```sh
+herdr plugin link /path/to/model-router
+herdr plugin action list --plugin model-router
+```
+
+`hooks/route-subagent-model.sh` is a worked example of routing an agent
+harness's own in-process subagents automatically. It falls through safely —
+never blocking a spawn — in every case it does not handle.
+
+### Turn it off for a project
+
+```sh
+router disable      # writes .herdr/router.json
+router enable
+```
+
+Absent flag means enabled. A corrupt flag fails open, because a typo in a config
+file should not silently stop a safety mechanism.
+
 ## Roles
 
 A role says what an entry is for. The router never walks them in order; they
@@ -202,22 +371,7 @@ as strong at review as the one doing the work. If the top two candidates are
 within `confirm_margin` on such a task, it says so and sets
 `needs_confirmation` in the JSON, but still commits to a winner.
 
-## Turning it on and off
-
-Routing is **on by default** for every project. The switch is a file in the
-project, so a checkout carries its own answer:
-
-```sh
-route.py --status        # routing: ON  (project default, no flag file)
-route.py --disable       # writes .herdr/router.json {"enabled": false}
-route.py --enable
-```
-
-An absent flag means enabled; disabling is the deliberate act. A corrupt flag
-fails open — routing stays on and says why — because a typo in a config file
-should not silently stop a safety mechanism.
-
-### Automatic routing, where a hook point exists
+## Automatic routing, where a hook point exists
 
 | Path | Automatic? |
 | --- | --- |
@@ -239,18 +393,6 @@ One constraint: Claude Code's subagents accept only the aliases
 model at all. So `--for-subagent` returns an alias keyed on the winning role,
 and the local role — having no in-process equivalent — maps to the cheapest
 Claude alias and says so.
-
-## Tuning
-
-Every threshold and weight lives in `jev_router.py:DEFAULTS` and can be
-overridden by a `config.json` beside the script (`cp config.example.json
-config.json`). Nothing in selection calls Jev, so retuning is free:
-
-```sh
-route.py "$TASK" --json > /tmp/v.json          # keep the judgments
-jq .judgments /tmp/v.json > /tmp/j.json
-route.py "$TASK" --judgments-file /tmp/j.json  # re-route, no API call
-```
 
 ## Usage
 
