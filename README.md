@@ -38,6 +38,20 @@ lines and the worker is running.
 - **Advisory.** It prints commands and never runs them. The only command it
   executes is the read-only `herdr agent list`. ([threat model](docs/security.md))
 
+**Which agents does it work with?** Three different answers, so be clear which
+you want ([details](docs/harnesses.md)):
+
+| | Claude Code | Codex | pi |
+| --- | --- | --- | --- |
+| **Route to it** — the router picks it and prints the start command | yes | yes | yes |
+| **Hook into it** — it asks the router before spawning sub-agents, automatically | yes | not verified | no mechanism |
+| **Call it yourself** — `router run`, then act on the answer | yes | yes | yes |
+
+Routing *to* a harness needs nothing from the harness and is the main use.
+Hooking *into* one needs a pre-spawn hook that can rewrite the model, and only
+Claude Code is confirmed to have one — `hooks/route-subagent-model.sh` is a
+working example. From Herdr, the plugin works with all three.
+
 Full walkthrough: [Using it](#using-it).
 
 ---
@@ -375,24 +389,20 @@ within `confirm_margin` on such a task, it says so and sets
 
 | Path | Automatic? |
 | --- | --- |
-| In-process subagents of a harness with a pre-spawn hook | **Yes** |
-| A pane you start yourself (`herdr agent start`) | **No hook point.** The router advises. |
+| Claude Code's in-process sub-agents (`Agent`/`Task`) | **yes** — `PreToolUse` can rewrite the model |
+| Codex sub-agents | **not verified** — Codex has hooks, but no model-rewriting event is confirmed |
+| pi | **no** — pi exposes no hooks |
+| A pane you start yourself (`herdr agent start`) | **no hook point.** The router advises. |
 
-`hooks/route-subagent-model.sh` is a worked example for Claude Code's
-`PreToolUse` hook on `Agent|Task`. It adds about 1.5s to a spawn — of which
-~0.7s is importing the SDK and ~0.25s is the Jev call — and it is deliberately
-conservative: it hands the spawn to whatever hook ran before it, unchanged, when
-routing is off, when a model was named explicitly, on a `fork`, or if the router
-is missing, keyless, slow or unreachable.
+`hooks/route-subagent-model.sh` is the Claude Code example. It adds about 1.5s
+to a spawn and is deliberately conservative: it hands the spawn to whatever hook
+ran before it, unchanged, when routing is off, when a model was named
+explicitly, on a `fork`, or if the router is missing, keyless, slow or
+unreachable. **A spawn is never blocked by it** — a model chooser that can wedge
+your agent harness is worse than no model chooser.
 
-**A spawn is never blocked by it.** That matters more than the routing: a model
-chooser that can wedge your agent harness is worse than no model chooser.
-
-One constraint: Claude Code's subagents accept only the aliases
-`haiku|sonnet|opus|fable`, not full identifiers, and cannot run a locally served
-model at all. So `--for-subagent` returns an alias keyed on the winning role,
-and the local role — having no in-process equivalent — maps to the cheapest
-Claude alias and says so.
+Per-harness setup, the environment variables, and the sub-agent alias
+constraint are in **[docs/harnesses.md](docs/harnesses.md)**.
 
 ## Usage
 
@@ -499,6 +509,7 @@ no candidate survives, every exclusion is recorded with a reason.
 | --- | --- |
 | [docs/architecture.md](docs/architecture.md) | The pipeline, what Jev is and is not told, every eligibility rule and scoring term, and why the design is deterministic |
 | [docs/configuration.md](docs/configuration.md) | Complete reference for `models.json` and every threshold and weight in `config.json` |
+| [docs/harnesses.md](docs/harnesses.md) | Wiring it to Claude Code, Codex and pi: what each supports, the hook, and the constraints |
 | [docs/security.md](docs/security.md) | Trust boundaries, the defect classes addressed and how, secret handling, and data at rest |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Running the tests, code style, and how to add a model or a harness |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
