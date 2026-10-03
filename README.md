@@ -5,6 +5,19 @@ to start it. The router considers the models you can run, the task's difficulty
 and size, and your cost and safety rules. It prints a recommendation; you decide
 whether to run the commands.
 
+## Agent's setup
+
+Paste this into your coding agent:
+
+```text
+Install model-router from https://github.com/robertxxiv/model-router. Follow
+its README to install dependencies and configure real, launchable models and
+a TypeSafe API key; never commit the key. If you're in Claude Code, connect
+the included hooks/route-subagent-model.sh to PreToolUse for Agent|Task. In
+another harness, use the CLI directly. Verify the setup with
+python3 router.py models and one test route.
+```
+
 ## Quickstart
 
 Run these commands from the repository directory:
