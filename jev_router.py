@@ -131,7 +131,7 @@ async def judge(client, task: str, facts: dict | None = None,
                 attempts: list[dict] | None = None, *, model: str | None = None,
                 cfg: dict | None = None) -> dict:
     """Ask Jev every question about one assignment, in a single request."""
-    settings = DEFAULTS if cfg is None else cfg
+    settings = DEFAULTS if cfg is None else {**DEFAULTS, **cfg}
     operation_timeout = float(settings["jev_timeout_seconds"])
     total_timeout = float(settings["jev_total_timeout_seconds"])
     try:

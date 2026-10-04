@@ -12,6 +12,36 @@ MAX_BYTES = 2_000_000       # files larger than this are counted, not read
 MAX_DIRECTORY_FILES = 200
 TEST_HINTS = ("test_", "_test", "spec_", "_spec")
 
+# Expanding a named directory must yield the task's source, not its history and
+# its build output. Counting .git objects or .pyc files as lines inflates the
+# measured context requirement, and that requirement is a hard filter: an
+# over-count can exclude a model that would in fact have held the task.
+SKIP_DIRS = frozenset({"node_modules", "__pycache__", "vendor", "target", "dist"})
+
+
+def _skipped_dir(name: str) -> bool:
+    return name.startswith(".") or name in SKIP_DIRS
+
+
+def _source_files(root: Path) -> list[Path]:
+    """Files under `root`, pruning history, caches and vendored trees."""
+    out: list[Path] = []
+    stack = [root]
+    while stack:
+        d = stack.pop()
+        try:
+            children = sorted(d.iterdir())
+        except OSError:
+            continue
+        for child in children:
+            if child.is_dir():
+                if not child.is_symlink() and not _skipped_dir(child.name):
+                    stack.append(child)
+            elif child.is_file():
+                out.append(child)
+    out.sort(key=lambda q: q.relative_to(root).as_posix())
+    return out
+
 
 def _loc(p: Path) -> int | None:
     try:
@@ -28,8 +58,16 @@ def _looks_like_test(p: Path) -> bool:
     return any(h in name for h in TEST_HINTS) or "tests" in {q.lower() for q in p.parts}
 
 
-def _has_nearby_tests(p: Path) -> bool:
-    """A sibling test file or a tests/ directory beside or above the target."""
+def _has_nearby_tests(p: Path, _memo: dict[Path, bool] | None = None) -> bool:
+    """A sibling test file or a tests/ directory beside or above the target.
+
+    Answered per parent directory, because many named files share one parent and
+    the answer cannot differ between them.
+    """
+    if _memo is not None:
+        if p.parent not in _memo:
+            _memo[p.parent] = _has_nearby_tests(p)
+        return _memo[p.parent]
     try:
         parent = p.parent
         if any(_looks_like_test(q) for q in parent.iterdir() if q.is_file()):
@@ -66,10 +104,7 @@ def measure(paths: list[str] | None, *, include_diff: bool = False,
         for raw in paths:
             p = (cwd / raw).resolve() if not Path(raw).is_absolute() else Path(raw)
             if p.is_dir():
-                kids = sorted(
-                    (q for q in p.rglob("*") if q.is_file()),
-                    key=lambda q: q.relative_to(p).as_posix(),
-                )
+                kids = _source_files(p)
                 dirs.append({"path": raw, "files_within": len(kids)})
                 selected = kids[:MAX_DIRECTORY_FILES]
                 files_skipped += len(kids) - len(selected)
@@ -101,8 +136,9 @@ def measure(paths: list[str] | None, *, include_diff: bool = False,
             facts["paths_that_do_not_exist"] = missing
         if measured:
             targets = [p for _, p in files if not _looks_like_test(p)]
-            facts["tests_already_exist_nearby"] = any(_has_nearby_tests(p) for p in targets) \
-                if targets else True
+            memo: dict[Path, bool] = {}
+            facts["tests_already_exist_nearby"] = any(
+                _has_nearby_tests(p, memo) for p in targets) if targets else True
             facts["some_named_files_are_tests"] = any(_looks_like_test(p) for _, p in files)
 
     if include_diff:

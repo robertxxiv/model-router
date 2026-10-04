@@ -19,12 +19,12 @@ import asyncio
 import json
 import os
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 import cache as cache_mod
 import candidates as cand_mod
 import catalog as catalog_mod
-import eligibility as elig_mod
 import herdr_state
 import jev_router as rules
 import repo_facts
@@ -71,20 +71,22 @@ def load_config(path: Path | None) -> dict:
     return {**rules.DEFAULTS, **json.loads(p.read_text())}
 
 
-def _catalog_for(args) -> catalog_mod.Catalog:
-    """The catalog this invocation uses, or an empty one."""
-    path = Path(args.catalog) if args.catalog else catalog_mod.default_path(HERE)
-    try:
-        return catalog_mod.parse(path, required=bool(args.catalog))
-    except catalog_mod.CatalogError:
-        return catalog_mod.Catalog()
+@dataclass
+class CandidateSet:
+    """What one parse of the catalog yields: the candidates, and its verdicts."""
+
+    candidates: list[cand_mod.Candidate]
+    source: str
+    notes: list[str]
+    rejected: frozenset[str]        # identifiers the catalog marks unusable
 
 
-def build_candidates(args, cfg: dict) -> tuple[list[cand_mod.Candidate], str, list[str]]:
-    """Candidates from the catalog, or from a policy file when asked.
+def build_candidates(args, cfg: dict) -> CandidateSet:
+    """Candidates from the catalog this invocation names.
 
-    The catalog is primary: it states facts. A markdown policy file is still
-    supported for anyone who prefers one source of truth over two files.
+    The catalog is parsed exactly once per run: it states the facts routing
+    needs, and it also states which models are rejected outright, so both come
+    out of the same read.
     """
     notes: list[str] = []
     cat_path = Path(args.catalog) if args.catalog else catalog_mod.default_path(HERE)
@@ -101,10 +103,12 @@ def build_candidates(args, cfg: dict) -> tuple[list[cand_mod.Candidate], str, li
             f"server), convert a markdown policy file with "
             f"`router import-roster <file>`, or copy models.example.json."
         )
-    return cand_mod.from_catalog(cat, cfg), f"catalog {cat.source}", notes
+    return CandidateSet(candidates=cand_mod.from_catalog(cat, cfg),
+                        source=f"catalog {cat.source}", notes=notes,
+                        rejected=cat.rejected)
 
 
-def judge_cached(task: str, facts: dict | None, attempts, args, cfg: dict):
+def judge_cached(task: str, facts: dict | None, args):
     """Judgments for this task, replayed from the cache when possible.
 
     This is what makes the router deterministic: identical input gives
@@ -112,6 +116,9 @@ def judge_cached(task: str, facts: dict | None, attempts, args, cfg: dict):
     task, the measured facts, the wording of every question and the Jev model,
     so nothing stale can survive a change that would have altered the answer.
     """
+    # Before the key is built: a model named only in .env must be part of it,
+    # or a judgment made with one model would replay under another's key.
+    load_env()
     root = router_config.project_root(Path(args.cwd) if args.cwd else None)
     qsha = cache_mod.questions_fingerprint(rules.QUESTIONS)
     jev_model = args.jev_model or os.environ.get("TYPESAFE_DEFAULT_MODEL") or "jev-latest"
@@ -128,7 +135,6 @@ def judge_cached(task: str, facts: dict | None, attempts, args, cfg: dict):
             print(f"# cache unavailable ({exc}); judging live", file=sys.stderr)
             store = None
 
-    load_env()
     if not os.environ.get("TYPESAFE_API_KEY"):
         sys.exit("TYPESAFE_API_KEY not found. Put it in .env or export it. "
                  "(Or pass --judgments-file to route from stored judgments.)")
@@ -190,7 +196,7 @@ def show_status(start) -> None:
         print(f"catalog: none at {cat_path} - run discover.py --out models.json")
 
 
-def report(d: scoring.Decision, j: dict, args, reuse, herdr_err, source: str,
+def report(d: scoring.Decision, j: dict, args, reuse, herdr_err,
            notes: list[str], judgment_source: str = "jev") -> None:
     win = d.winner
     if win is None:
@@ -267,7 +273,8 @@ async def run(args: argparse.Namespace) -> int:
 
     cfg = load_config(Path(args.config) if args.config else None)
     args._cfg = cfg
-    cands, source, notes = build_candidates(args, cfg)
+    built = build_candidates(args, cfg)
+    cands, source, notes = built.candidates, built.source, built.notes
 
     if args.show_candidates:
         show_candidates(cands, source)
@@ -297,14 +304,21 @@ async def run(args: argparse.Namespace) -> int:
     if args.judgments_file:
         j = json.loads(Path(args.judgments_file).read_text())
     else:
-        got, how = judge_cached(task, facts or None, attempt_notes, args, cfg)
+        got, how = judge_cached(task, facts or None, args)
         if how == "cache":
             j, judgment_source = got, "cache"
         else:
             client_cls, store, key, task_sha, facts_sha, qsha, jev_model = got
-            async with client_cls() as client:
-                j = await rules.judge(client, task, facts or None,
-                                      attempt_notes or None, model=args.jev_model)
+            try:
+                async with client_cls() as client:
+                    j = await rules.judge(client, task, facts or None,
+                                          attempt_notes or None,
+                                          model=args.jev_model, cfg=cfg)
+            except Exception as exc:
+                if store is not None:
+                    store.close()
+                sys.exit(f"could not judge this task: {exc}\n"
+                         f"(Use --judgments-file to route from stored judgments.)")
             judgment_source = "jev"
             if store is not None:
                 try:
@@ -312,10 +326,8 @@ async def run(args: argparse.Namespace) -> int:
                 finally:
                     store.close()
 
-    # Models the catalog marks unusable.
-    excluded = _catalog_for(args).rejected
-
-    d = scoring.decide(cands, j, cfg, facts=facts, excluded_identifiers=excluded,
+    # Models the catalog marks unusable, from the single parse above.
+    d = scoring.decide(cands, j, cfg, facts=facts, excluded_identifiers=built.rejected,
                        failed=avoid, allow_specialist=args.allow_specialist,
                        harnesses=None if not args.no_harness_check else {
                            c.model.kind for c in cands})
@@ -367,7 +379,7 @@ async def run(args: argparse.Namespace) -> int:
             "jev_model": j.get("_model"),
         }, indent=2))
     else:
-        report(d, j, args, reuse, herdr_err, source, notes, judgment_source)
+        report(d, j, args, reuse, herdr_err, notes, judgment_source)
     return EXIT_NO_ROUTE if d.winner is None else EXIT_OK
 
 
