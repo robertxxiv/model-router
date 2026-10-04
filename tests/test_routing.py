@@ -417,6 +417,105 @@ def test_cache_makes_routes_repeatable() -> None:
         store.close()
 
 
+def test_floor_and_scorer_agree_on_need() -> None:
+    """The hard capability floor and the shortfall term read one formula.
+
+    Two copies of this arithmetic could drift, and a floor computed from a
+    different number than the score would exclude a candidate the scorer
+    preferred - a route nobody could explain.
+    """
+    for case in CASES:
+        j = case["judgments"]
+        need = scoring.capability_needed(j, CFG)
+        _, ex = elig_mod.filter_candidates(cands(), j, CFG, harnesses=HARNESSES)
+        for e in ex:
+            if e.rule != "below-capability-floor":
+                continue
+            check(f"({need:.2f})" in e.reason,
+                  "the floor exclusion quotes the scorer's need",
+                  f"{e.reason} vs need {need:.2f}")
+        d = route_it(j)
+        check(abs(d.need - need) < 1e-9, "decide() reports that same need")
+
+
+def test_directory_facts_ignore_history_and_caches() -> None:
+    """A named directory measures its source, not .git or build output.
+
+    The measured line count becomes a hard context requirement, so counting a
+    repository's history as source can exclude a model that would have fitted.
+    """
+    import repo_facts
+
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        (root / "src").mkdir()
+        (root / "src" / "app.py").write_text("x = 1\n" * 10)
+        for junk in (".git", "__pycache__", "node_modules"):
+            (root / junk).mkdir()
+            (root / junk / "blob").write_text("junk\n" * 5000)
+
+        facts = repo_facts.measure([str(root)])
+        check(facts["total_lines"] == 10,
+              "only the source lines are counted", str(facts["total_lines"]))
+        check(facts["directories_named"][0]["files_within"] == 1,
+              "and only the source files are listed",
+              str(facts["directories_named"][0]))
+        check(facts["file_types"] == [".py"],
+              "so the reported file types are the task's own", str(facts["file_types"]))
+
+
+def test_partial_config_does_not_break_the_judge() -> None:
+    """A config.json that overrides one threshold must not lose the rest."""
+    import asyncio
+
+    class StubClient:
+        def __init__(self):
+            self.timeout = None
+
+        async def system_one(self, *, state, questions, model, retry, timeout):
+            self.timeout = timeout
+            raise RuntimeError("stop here; only the settings matter")
+
+    for cfg, expected in ((None, rules.DEFAULTS["jev_timeout_seconds"]),
+                          ({"ambiguity_lifts_need": 0.3}, rules.DEFAULTS["jev_timeout_seconds"]),
+                          ({"jev_timeout_seconds": 3.0}, 3.0)):
+        client = StubClient()
+        try:
+            asyncio.run(rules.judge(client, "a task", cfg=cfg))
+        except RuntimeError:
+            pass
+        check(client.timeout == expected,
+              "the judge call uses the configured per-operation timeout",
+              f"cfg={cfg} gave {client.timeout}, expected {expected}")
+
+
+def test_catalog_is_parsed_once_per_route() -> None:
+    """`build_candidates` carries the rejected set, so nothing re-reads the file."""
+    calls = []
+    real_parse = catalog_mod.parse
+
+    def counting_parse(path, **kw):
+        calls.append(str(path))
+        return real_parse(path, **kw)
+
+    class Args:
+        catalog = str(CATALOG)
+        config = None
+        cwd = None
+
+    catalog_mod.parse = counting_parse
+    try:
+        built = route.build_candidates(Args(), CFG)
+    finally:
+        catalog_mod.parse = real_parse
+
+    check(len(calls) == 1, "the catalog is read exactly once", f"{len(calls)} reads")
+    check(built.candidates and built.source.startswith("catalog"),
+          "build_candidates still returns candidates and their source")
+    check(built.rejected == real_parse(CATALOG).rejected,
+          "and the rejected set from that same parse")
+
+
 if __name__ == "__main__":
     for fn in (test_catalog, test_candidates, test_eligibility_rules,
                test_scoring_is_deterministic, test_shortfall_beats_cost,
@@ -428,7 +527,11 @@ if __name__ == "__main__":
                test_capability_floor, test_architecture_guard,
                test_emitted_commands_are_injection_safe,
                test_cache_refuses_symlinked_state,
-               test_cache_makes_routes_repeatable):
+               test_cache_makes_routes_repeatable,
+               test_floor_and_scorer_agree_on_need,
+               test_directory_facts_ignore_history_and_caches,
+               test_partial_config_does_not_break_the_judge,
+               test_catalog_is_parsed_once_per_route):
         fn()
     if failures:
         print(f"FAILED {len(failures)}/{checks} checks\n")

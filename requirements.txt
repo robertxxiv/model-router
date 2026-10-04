@@ -1,1 +1,2 @@
+# Python 3.11+ required (asyncio.timeout).
 typesafe-sdk>=0.7.2

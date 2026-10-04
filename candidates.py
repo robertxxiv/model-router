@@ -188,12 +188,9 @@ def from_catalog(cat: catalog_mod.Catalog, cfg: dict | None = None) -> list[Cand
             effort=entry.effort,
             role_label=entry.notes or f"catalog: {entry.id}",
         )
-        reasons = True
-        if entry.quantized or (entry.harness == "pi"):
-            # A local alias's reasoning behaviour is an operator convention, not a
-            # server fact, so it is only believed when the catalog states it.
-            reasons = True
-        out.append(_one(model, entry.id, entry.role, reasons, cfg, cat))
+        # A local alias's reasoning behaviour is an operator convention rather
+        # than a server fact, so every catalog entry is taken at face value.
+        out.append(_one(model, entry.id, entry.role, True, cfg, cat))
     out.sort(key=lambda c: (c.cost_class, c.capability("coding"), c.key))
     return out
 

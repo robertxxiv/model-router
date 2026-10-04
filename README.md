@@ -20,7 +20,8 @@ python3 router.py models and one test route.
 
 ## Quickstart
 
-Run these commands from the repository directory:
+Needs Python 3.11 or newer (the Jev call bounds itself with
+`asyncio.timeout`). Run these commands from the repository directory:
 
 ```sh
 python3 -m venv .venv

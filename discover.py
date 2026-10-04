@@ -19,6 +19,7 @@ this repository:
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import os
 import re
@@ -140,8 +141,7 @@ def facts(entry: dict) -> dict:
     identifier = entry.get("id") if isinstance(entry.get("id"), str) else None
     model_path = _arg(args, "-m", "--model") or ""
     file = model_path.rsplit("/", 1)[-1]
-    quant = (re.search(r"(IQ\d|Q\d|BF16|F16)", file, re.I) or [None])
-    quant_full = re.search(r"(IQ\d_\w+|Q\d_\w_\w+|Q\d_\w+|Q\d|BF16|F16)", file, re.I)
+    quant = re.search(r"(IQ\d_\w+|Q\d_\w_\w+|Q\d_\w+|Q\d|BF16|F16)", file, re.I)
     ctx = _arg(args, "-c", "--ctx-size")
     params = re.search(r"(\d+(?:\.\d+)?)B", file)
     moe = re.search(r"A(\d+(?:\.\d+)?)B", file)
@@ -149,9 +149,7 @@ def facts(entry: dict) -> dict:
         "id": identifier,
         "alias": alias,
         "context_window": int(ctx) if ctx and ctx.isdigit() else None,
-        "quant": quant_full.group(1) if quant_full else None,
-        "quant_family": (quant[0].upper() if quant and quant[0] else None)
-            if not isinstance(quant, list) else None,
+        "quant": quant.group(1) if quant else None,
         "vision": bool(_arg(args, "--mmproj")),
         "speculative": "--mtp" in args or bool(re.search(r"mtp", file, re.I)),
         "params_b": float(params.group(1)) if params else None,
@@ -314,7 +312,7 @@ def main() -> int:
         models = list(entries.values())
 
     doc = {
-        "updatedAt": __import__("datetime").date.today().isoformat(),
+        "updatedAt": datetime.date.today().isoformat(),
         "provenance": existing.get("provenance") or (
             "Local models and their facts (context window, quantization, vision) are "
             "discovered from the inference server's own launch arguments by "

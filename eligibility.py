@@ -16,7 +16,7 @@ from dataclasses import dataclass
 
 import candidates as cand_mod
 import tiers
-from families import FAMILY_FOR_KIND
+from families import capability_needed, family_for
 
 # Roughly how many tokens a line of source costs. Only used to turn a measured
 # file size into a context requirement, and only when files were named.
@@ -63,9 +63,8 @@ def filter_candidates(
     harnesses = available_harnesses() if harnesses is None else harnesses
     needed = context_required(facts)
     planning = judgments.get("task_kind") == "orchestrate"
-    family = FAMILY_FOR_KIND.get(judgments.get("task_kind", ""), "coding")
-    need = min(1.0, float(judgments.get("reasoning_complexity", 0.5))
-               + cfg["ambiguity_lifts_need"] * float(judgments.get("ambiguity", 0.0)))
+    family = family_for(judgments)
+    need = capability_needed(judgments, cfg)
     floor = need - cfg["max_capability_shortfall"]
     architecture = (
         judgments.get("architecture_scope", 0.0) >= cfg["architecture_threshold"]

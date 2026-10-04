@@ -25,11 +25,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 import candidates as cand_mod
-import catalog as catalog_mod
 import eligibility as elig_mod
 import tiers
 
-from families import DEFAULT_FAMILY, FAMILY_FOR_KIND, family_for  # noqa: F401
+from families import capability_needed, family_for
 
 
 @dataclass(frozen=True)
@@ -72,17 +71,6 @@ class Decision:
         if self.runner_up is None:
             return None
         return round(self.ranked[0].score - self.ranked[1].score, 4)
-
-
-def capability_needed(judgments: dict, cfg: dict) -> float:
-    """How much capability the task demands.
-
-    Reasoning difficulty sets the bar; ambiguity raises it, because an
-    underspecified task has to be figured out before it can be done.
-    """
-    need = float(judgments.get("reasoning_complexity", 0.5))
-    need += cfg["ambiguity_lifts_need"] * float(judgments.get("ambiguity", 0.0))
-    return max(0.0, min(1.0, need))
 
 
 def tokens_needed(judgments: dict, cfg: dict, facts: dict | None) -> int:

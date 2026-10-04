@@ -17,7 +17,6 @@ import argparse
 import asyncio
 import json
 import os
-import shutil
 import sys
 import time
 from pathlib import Path
@@ -25,7 +24,6 @@ from pathlib import Path
 import cache as cache_mod
 import candidates as cand_mod
 import catalog as catalog_mod
-import eligibility as elig_mod
 import jev_router as rules
 import route
 import router_config
@@ -56,9 +54,9 @@ def cmd_run(args) -> int:
 # ------------------------------------------------------------------ models --
 def cmd_models(args) -> int:
     args._cfg = cfg = route.load_config(Path(args.config) if args.config else None)
-    cands, source, notes = route.build_candidates(args, cfg)
-    route.show_candidates(cands, source)
-    for n in notes:
+    built = route.build_candidates(args, cfg)
+    route.show_candidates(built.candidates, built.source)
+    for n in built.notes:
         print(f"\n  warning: {n}")
     return 0
 

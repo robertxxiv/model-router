@@ -4,6 +4,41 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `.env` is now read before the judgment cache key is built. A Jev model named
+  only in `.env` was previously missing from the key, so a judgment made with
+  one model could be replayed under another model's key.
+- `jev_timeout_seconds` and `jev_total_timeout_seconds` from `config.json` now
+  reach the Jev call; it was always using the built-in defaults. A `config.json`
+  that sets only some keys no longer makes the call fail.
+- A Jev timeout, authentication failure or API error now exits with a one-line
+  message pointing at `--judgments-file`, instead of a traceback, and closes the
+  cache connection on the way out.
+- Expanding a named directory into repository facts skips history, caches and
+  vendored trees (`.git`, `__pycache__`, `node_modules`, ...). Their contents
+  were counted as source lines, and that count is a hard context filter, so an
+  over-count could exclude a model that would in fact have held the task.
+
+### Changed
+
+- The capability the task demands is derived in one place (`families.py`) and
+  read by both the hard capability floor and the shortfall term, which could
+  previously drift apart.
+- The catalog is parsed once per route instead of twice; `build_candidates`
+  returns a `CandidateSet` carrying the candidates, their source, the parse
+  warnings and the rejected identifiers.
+- `README.md` and `requirements.txt` state the Python 3.11 minimum.
+
+### Removed
+
+- Dead code: a no-op branch in `candidates.from_catalog`, the unread
+  `quant_family` field and its duplicate regex in `discover.py`, unused imports
+  and re-exports, and two unused function parameters.
+
+
 ## [0.1.0] - 2026-10-03
 
 First public release.
